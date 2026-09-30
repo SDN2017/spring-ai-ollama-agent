@@ -14,9 +14,15 @@
       body {
         background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
       }
+      .chat-body {
+        min-height: 0;
+      }
       .chat-scroll {
+        overflow-y: scroll;
         scrollbar-width: thin;
         scrollbar-color: #94a3b8 #f8fafc;
+        scrollbar-gutter: stable;
+        min-height: 0;
       }
       .chat-scroll::-webkit-scrollbar {
         width: 10px;
@@ -56,7 +62,7 @@
       </header>
 
       <main class="chat-body flex-1 p-4 flex flex-col">
-        <div id="chatBox" class="chat-scroll flex-1 overflow-y-auto space-y-4 bg-slate-50 p-4 rounded-xl border border-slate-200"></div>
+        <div id="chatBox" class="chat-scroll flex-1 overflow-y-scroll space-y-4 bg-slate-50 p-4 rounded-xl border border-slate-200"></div>
 
         <form id="chatForm" class="mt-4 flex gap-3">
           <input

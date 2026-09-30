@@ -5,6 +5,25 @@ spring:
   application:
     name: spring-ai-agent
 
+  datasource:
+    url: jdbc:postgresql://localhost:5432/products
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:admin}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+    show-sql: true
+
+  sql:
+    init:
+      mode: always
+
   ai:
     ollama:
       base-url: http://localhost:11434
