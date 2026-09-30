@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Spring AI Chat</title>
+    <title>AI Chatbot</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
       html, body {
@@ -11,74 +11,141 @@
         margin: 0;
         overflow: hidden;
       }
+
       body {
-        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+        background: radial-gradient(circle at top, #f8fbff 0%, #eef4ff 28%, #e2e8f0 100%);
       }
-      .chat-body {
-        min-height: 0;
-      }
+
       .chat-scroll {
-        overflow-y: scroll;
+        overflow-y: auto;
         scrollbar-width: thin;
-        scrollbar-color: #94a3b8 #f8fafc;
-        scrollbar-gutter: stable;
-        min-height: 0;
+        scrollbar-color: rgba(148, 163, 184, 0.9) transparent;
       }
+
       .chat-scroll::-webkit-scrollbar {
-        width: 10px;
+        width: 8px;
       }
+
       .chat-scroll::-webkit-scrollbar-track {
-        background: #f8fafc;
-        border-radius: 9999px;
+        background: transparent;
       }
+
       .chat-scroll::-webkit-scrollbar-thumb {
-        background: #94a3b8;
+        background: rgba(148, 163, 184, 0.9);
         border-radius: 9999px;
       }
-      .chat-scroll::-webkit-scrollbar-thumb:hover {
-        background: #64748b;
-      }
+
       .chat-shell {
         height: calc(100vh - 32px);
-        transition: all 0.2s ease;
+        transition: all 0.25s ease;
       }
+
       .chat-shell.minimized {
-        height: 76px;
+        height: 84px;
       }
-      .chat-shell.minimized .chat-body {
+
+      .chat-shell.minimized .chat-content {
         display: none;
+      }
+
+      .chat-shell.minimized .browser-bar {
+        display: flex;
+      }
+
+      .browser-bar {
+        display: none;
+      }
+
+      .history-item.active {
+        background: rgba(59, 130, 246, 0.12);
+        border-color: rgba(59, 130, 246, 0.25);
       }
     </style>
   </head>
   <body class="min-h-screen p-4">
-    <div id="chatShell" class="chat-shell w-full bg-white shadow-2xl rounded-2xl overflow-hidden border border-slate-200 flex flex-col mx-auto">
-      <header class="bg-slate-900 text-white px-5 py-3 flex items-center justify-between">
-        <h1 class="text-lg font-semibold">Spring AI Agent Chat</h1>
+    <div id="chatShell" class="chat-shell w-full bg-white/80 backdrop-blur-xl shadow-2xl rounded-3xl border border-slate-200/80 flex overflow-hidden">
+      <div class="browser-bar absolute top-0 left-0 right-0 z-10 hidden h-12 items-center justify-between border-b border-slate-200 bg-slate-50/90 px-4 py-2 backdrop-blur-xl">
         <div class="flex items-center gap-2">
-          <button id="toggleChat" class="rounded-lg bg-slate-700 hover:bg-slate-600 px-3 py-1.5 text-sm font-medium">
-            Minimize
+          <span class="h-3 w-3 rounded-full bg-red-400"></span>
+          <span class="h-3 w-3 rounded-full bg-yellow-400"></span>
+          <span class="h-3 w-3 rounded-full bg-green-400"></span>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="maximizeChatMinimized" class="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 shadow-sm">
+            Maximize
+          </button>
+          <button id="toggleChatMinimized" class="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 shadow-sm">
+            Restore
           </button>
         </div>
-      </header>
+      </div>
 
-      <main class="chat-body flex-1 p-4 flex flex-col">
-        <div id="chatBox" class="chat-scroll flex-1 overflow-y-scroll space-y-4 bg-slate-50 p-4 rounded-xl border border-slate-200"></div>
+      <aside class="w-[300px] border-r border-slate-200 bg-slate-950 text-slate-100 flex flex-col">
+        <div class="px-5 py-5 border-b border-slate-800">
+          <div class="flex items-center justify-between gap-3">
+            <div>
+              <p class="text-[11px] uppercase tracking-[0.2em] text-sky-300">Workspace</p>
+              <h2 class="mt-2 text-xl font-semibold">AI Support</h2>
+            </div>
+            <button id="newChatBtn" class="rounded-xl bg-sky-500 hover:bg-sky-400 px-3 py-2 text-sm font-medium text-white transition">
+              New chat
+            </button>
+          </div>
+        </div>
 
-        <form id="chatForm" class="mt-4 flex gap-3">
-          <input
-            id="messageInput"
-            type="text"
-            placeholder="Type your message..."
-            class="flex-1 border border-slate-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
-            autocomplete="off"
-          />
-          <button
-            type="submit"
-            class="bg-sky-600 hover:bg-sky-700 text-white font-medium px-5 py-3 rounded-xl transition"
-          >
-            Send
-          </button>
-        </form>
+        <div class="px-4 py-4">
+          <div class="mb-3 flex items-center justify-between">
+            <p class="text-xs font-medium uppercase tracking-[0.2em] text-slate-400">Recent chats</p>
+            <span class="rounded-full bg-slate-800 px-2 py-1 text-[10px] text-slate-300">4</span>
+          </div>
+
+          <div id="historyList" class="space-y-2"></div>
+        </div>
+      </aside>
+
+      <main class="chat-content flex-1 flex flex-col min-w-0 bg-white">
+        <header class="flex items-center justify-between border-b border-slate-200 bg-slate-50/80 px-5 py-4">
+          <div class="flex items-center gap-3">
+            <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 to-blue-600 text-sm font-bold text-white shadow-lg shadow-sky-500/20">
+              AI
+            </div>
+            <div>
+              <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Customer support</p>
+              <h1 class="text-lg font-semibold text-slate-800">Order & Inventory Assistant</h1>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <button id="maximizeChat" class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-100">
+              Maximize
+            </button>
+            <button id="toggleChat" class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-100">
+              Minimize
+            </button>
+          </div>
+        </header>
+
+        <div class="flex flex-1 flex-col p-4 min-h-0">
+          <div id="chatBox" class="chat-scroll flex-1 space-y-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 shadow-inner"></div>
+
+          <form id="chatForm" class="mt-4 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+            <div class="flex items-center gap-3">
+              <input
+                id="messageInput"
+                type="text"
+                placeholder="Ask about an order or product stock..."
+                class="flex-1 border-0 bg-transparent px-2 py-3 text-slate-700 placeholder:text-slate-400 focus:outline-none"
+                autocomplete="off"
+              />
+              <button
+                type="submit"
+                class="inline-flex items-center justify-center rounded-xl bg-sky-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-sky-500/20 transition hover:bg-sky-500"
+              >
+                Send
+              </button>
+            </div>
+          </form>
+        </div>
       </main>
     </div>
 
@@ -88,30 +155,79 @@
       const chatForm = document.getElementById('chatForm');
       const messageInput = document.getElementById('messageInput');
       const toggleButton = document.getElementById('toggleChat');
+      const maximizeButton = document.getElementById('maximizeChat');
+      const toggleMinimizedButton = document.getElementById('toggleChatMinimized');
+      const maximizeMinimizedButton = document.getElementById('maximizeChatMinimized');
+      const newChatBtn = document.getElementById('newChatBtn');
+      const historyList = document.getElementById('historyList');
 
-      const conversationId = crypto.randomUUID();
+      const defaultConversationTitle = 'Customer support';
+      let currentConversationId = crypto.randomUUID();
       let isMinimized = false;
+      let history = [
+        { id: crypto.randomUUID(), title: 'Order status check', preview: 'Status of order 1042' },
+        { id: crypto.randomUUID(), title: 'Inventory lookup', preview: 'Check Bluetooth Headphones stock' },
+        { id: crypto.randomUUID(), title: 'Product availability', preview: 'Get all products in stock' }
+      ];
 
-      function toggleChatWindow() {
-        isMinimized = !isMinimized;
+      function renderHistory() {
+        historyList.innerHTML = '';
+
+        history.forEach((item) => {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'history-item w-full rounded-xl border border-slate-800 bg-slate-900/70 p-3 text-left transition hover:border-sky-500/40 hover:bg-slate-800';
+          button.innerHTML = `
+            <div class="flex items-center justify-between gap-3">
+              <span class="text-sm font-medium text-slate-100">${item.title}</span>
+              <span class="h-2.5 w-2.5 rounded-full bg-emerald-400"></span>
+            </div>
+            <p class="mt-2 text-xs text-slate-400">${item.preview}</p>
+          `;
+          button.addEventListener('click', () => {
+            historyList.querySelectorAll('.history-item').forEach((node) => node.classList.remove('active'));
+            button.classList.add('active');
+            currentConversationId = crypto.randomUUID();
+            chatBox.innerHTML = '';
+            addMessage('bot', 'Hello! Ask me anything about your orders or product inventory.');
+          });
+          historyList.appendChild(button);
+        });
+
+        const firstItem = historyList.querySelector('.history-item');
+        if (firstItem) firstItem.classList.add('active');
+      }
+
+      function updateShellState() {
         chatShell.classList.toggle('minimized', isMinimized);
-        toggleButton.textContent = isMinimized ? 'Maximize' : 'Minimize';
+        toggleButton.textContent = isMinimized ? 'Restore' : 'Minimize';
+        toggleMinimizedButton.textContent = isMinimized ? 'Restore' : 'Minimize';
+        maximizeButton.textContent = 'Maximize';
+        maximizeMinimizedButton.textContent = 'Maximize';
         if (!isMinimized) {
           messageInput.focus();
         }
       }
 
-      toggleButton.addEventListener('click', toggleChatWindow);
+      function toggleChatWindow() {
+        isMinimized = !isMinimized;
+        updateShellState();
+      }
+
+      function maximizeChatWindow() {
+        isMinimized = false;
+        updateShellState();
+      }
 
       function addMessage(role, text) {
         const wrapper = document.createElement('div');
         wrapper.className = `flex ${role === 'user' ? 'justify-end' : 'justify-start'}`;
 
         const bubble = document.createElement('div');
-        bubble.className = `max-w-[80%] rounded-2xl px-4 py-3 shadow-sm ${
+        bubble.className = `max-w-[80%] rounded-2xl px-4 py-3 shadow-sm whitespace-pre-wrap ${
           role === 'user'
-            ? 'bg-sky-600 text-white rounded-br-md'
-            : 'bg-white text-slate-800 border border-slate-200 rounded-bl-md'
+            ? 'bg-gradient-to-r from-sky-600 to-blue-600 text-white rounded-br-md'
+            : 'bg-white text-slate-700 border border-slate-200 rounded-bl-md'
         }`;
         bubble.textContent = text;
 
@@ -130,7 +246,7 @@
         const thinking = document.createElement('div');
         thinking.className = 'flex justify-start';
         thinking.innerHTML = `
-          <div class="max-w-[80%] rounded-2xl px-4 py-3 bg-white text-slate-600 border border-slate-200 shadow-sm rounded-bl-md">
+          <div class="max-w-[80%] rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-600 shadow-sm rounded-bl-md">
             Thinking...
           </div>
         `;
@@ -142,7 +258,7 @@
             method: 'POST',
             headers: {
               'Content-Type': 'text/plain',
-              'Conversation-Id': conversationId
+              'Conversation-Id': currentConversationId
             },
             body: message
           });
@@ -150,17 +266,30 @@
           const text = await response.text();
           const botBubble = thinking.querySelector('div');
           botBubble.textContent = text || 'No response from server.';
-          botBubble.className = 'max-w-[80%] rounded-2xl px-4 py-3 bg-white text-slate-800 border border-slate-200 shadow-sm rounded-bl-md';
+          botBubble.className = 'max-w-[80%] rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-700 shadow-sm rounded-bl-md whitespace-pre-wrap';
         } catch (error) {
           const botBubble = thinking.querySelector('div');
           botBubble.textContent = 'Error contacting server. Please try again.';
-          botBubble.className = 'max-w-[80%] rounded-2xl px-4 py-3 bg-red-50 text-red-700 border border-red-200 shadow-sm rounded-bl-md';
+          botBubble.className = 'max-w-[80%] rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-red-700 shadow-sm rounded-bl-md';
           console.error(error);
         } finally {
           messageInput.disabled = false;
           messageInput.focus();
         }
       }
+
+      function startNewChat() {
+        currentConversationId = crypto.randomUUID();
+        chatBox.innerHTML = '';
+        addMessage('bot', 'New conversation started. Ask me about order status or inventory.');
+        messageInput.focus();
+      }
+
+      toggleButton.addEventListener('click', toggleChatWindow);
+      maximizeButton.addEventListener('click', maximizeChatWindow);
+      toggleMinimizedButton.addEventListener('click', toggleChatWindow);
+      maximizeMinimizedButton.addEventListener('click', maximizeChatWindow);
+      newChatBtn.addEventListener('click', startNewChat);
 
       chatForm.addEventListener('submit', async (event) => {
         event.preventDefault();
@@ -169,6 +298,7 @@
         await sendMessage(message);
       });
 
+      renderHistory();
       addMessage('bot', 'Hello! Ask me anything about your orders or chat with the AI agent.');
     </script>
   </body>
