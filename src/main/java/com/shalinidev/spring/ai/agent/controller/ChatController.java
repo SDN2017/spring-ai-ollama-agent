@@ -16,16 +16,10 @@ public class ChatController {
     private static final Logger log = LoggerFactory.getLogger(ChatController.class);
     private final ChatService chatService;
 
-   /* @GetMapping
-    public ResponseEntity<String> chatGet(@RequestHeader("Conversation-Id") String conversationId,
-                                          @RequestBody String message) {
+    @PostMapping(consumes = "text/plain")
+    public ResponseEntity<String> chatPost(@RequestHeader("Conversation-Id") String conversationId, @RequestBody String message) {
+        log.info("Received POST chat request: {}", message);
+        log.info("Conversation-id: {}", conversationId);
         return ResponseEntity.ok(chatService.chat(message, conversationId));
-    }*/
-
-    @GetMapping
-    public ResponseEntity<String> chatGet(@RequestBody String message) {
-      //  String response = "You said: " + message;
-      log.info("Received chat request: {}", message);
-        return ResponseEntity.ok(chatService.chat(message));
     }
 }

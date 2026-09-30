@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Spring AI Chat</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      html, body {
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+      }
+      body {
+        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+      }
+      .chat-scroll {
+        scrollbar-width: thin;
+        scrollbar-color: #94a3b8 #f8fafc;
+      }
+      .chat-scroll::-webkit-scrollbar {
+        width: 10px;
+      }
+      .chat-scroll::-webkit-scrollbar-track {
+        background: #f8fafc;
+        border-radius: 9999px;
+      }
+      .chat-scroll::-webkit-scrollbar-thumb {
+        background: #94a3b8;
+        border-radius: 9999px;
+      }
+      .chat-scroll::-webkit-scrollbar-thumb:hover {
+        background: #64748b;
+      }
+      .chat-shell {
+        height: calc(100vh - 32px);
+        transition: all 0.2s ease;
+      }
+      .chat-shell.minimized {
+        height: 76px;
+      }
+      .chat-shell.minimized .chat-body {
+        display: none;
+      }
+    </style>
+  </head>
+  <body class="min-h-screen p-4">
+    <div id="chatShell" class="chat-shell w-full bg-white shadow-2xl rounded-2xl overflow-hidden border border-slate-200 flex flex-col mx-auto">
+      <header class="bg-slate-900 text-white px-5 py-3 flex items-center justify-between">
+        <h1 class="text-lg font-semibold">Spring AI Agent Chat</h1>
+        <div class="flex items-center gap-2">
+          <button id="toggleChat" class="rounded-lg bg-slate-700 hover:bg-slate-600 px-3 py-1.5 text-sm font-medium">
+            Minimize
+          </button>
+        </div>
+      </header>
+
+      <main class="chat-body flex-1 p-4 flex flex-col">
+        <div id="chatBox" class="chat-scroll flex-1 overflow-y-auto space-y-4 bg-slate-50 p-4 rounded-xl border border-slate-200"></div>
+
+        <form id="chatForm" class="mt-4 flex gap-3">
+          <input
+            id="messageInput"
+            type="text"
+            placeholder="Type your message..."
+            class="flex-1 border border-slate-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+            autocomplete="off"
+          />
+          <button
+            type="submit"
+            class="bg-sky-600 hover:bg-sky-700 text-white font-medium px-5 py-3 rounded-xl transition"
+          >
+            Send
+          </button>
+        </form>
+      </main>
+    </div>
+
+    <script>
+      const chatShell = document.getElementById('chatShell');
+      const chatBox = document.getElementById('chatBox');
+      const chatForm = document.getElementById('chatForm');
+      const messageInput = document.getElementById('messageInput');
+      const toggleButton = document.getElementById('toggleChat');
+
+      const conversationId = crypto.randomUUID();
+      let isMinimized = false;
+
+      function toggleChatWindow() {
+        isMinimized = !isMinimized;
+        chatShell.classList.toggle('minimized', isMinimized);
+        toggleButton.textContent = isMinimized ? 'Maximize' : 'Minimize';
+        if (!isMinimized) {
+          messageInput.focus();
+        }
+      }
+
+      toggleButton.addEventListener('click', toggleChatWindow);
+
+      function addMessage(role, text) {
+        const wrapper = document.createElement('div');
+        wrapper.className = `flex ${role === 'user' ? 'justify-end' : 'justify-start'}`;
+
+        const bubble = document.createElement('div');
+        bubble.className = `max-w-[80%] rounded-2xl px-4 py-3 shadow-sm ${
+          role === 'user'
+            ? 'bg-sky-600 text-white rounded-br-md'
+            : 'bg-white text-slate-800 border border-slate-200 rounded-bl-md'
+        }`;
+        bubble.textContent = text;
+
+        wrapper.appendChild(bubble);
+        chatBox.appendChild(wrapper);
+        chatBox.scrollTop = chatBox.scrollHeight;
+      }
+
+      async function sendMessage(message) {
+        if (!message.trim()) return;
+
+        addMessage('user', message);
+        messageInput.value = '';
+        messageInput.disabled = true;
+
+        const thinking = document.createElement('div');
+        thinking.className = 'flex justify-start';
+        thinking.innerHTML = `
+          <div class="max-w-[80%] rounded-2xl px-4 py-3 bg-white text-slate-600 border border-slate-200 shadow-sm rounded-bl-md">
+            Thinking...
+          </div>
+        `;
+        chatBox.appendChild(thinking);
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        try {
+          const response = await fetch('/chat', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'text/plain',
+              'Conversation-Id': conversationId
+            },
+            body: message
+          });
+
+          const text = await response.text();
+          const botBubble = thinking.querySelector('div');
+          botBubble.textContent = text || 'No response from server.';
+          botBubble.className = 'max-w-[80%] rounded-2xl px-4 py-3 bg-white text-slate-800 border border-slate-200 shadow-sm rounded-bl-md';
+        } catch (error) {
+          const botBubble = thinking.querySelector('div');
+          botBubble.textContent = 'Error contacting server. Please try again.';
+          botBubble.className = 'max-w-[80%] rounded-2xl px-4 py-3 bg-red-50 text-red-700 border border-red-200 shadow-sm rounded-bl-md';
+          console.error(error);
+        } finally {
+          messageInput.disabled = false;
+          messageInput.focus();
+        }
+      }
+
+      chatForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const message = messageInput.value.trim();
+        if (!message) return;
+        await sendMessage(message);
+      });
+
+      addMessage('bot', 'Hello! Ask me anything about your orders or chat with the AI agent.');
+    </script>
+  </body>
+</html>
